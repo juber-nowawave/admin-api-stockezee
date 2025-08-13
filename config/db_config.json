@@ -1,0 +1,29 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "stockathonrds2684!!!",
+    "database": "stockezee",
+    "host": "stockathon-postgre-sql-server.cajm4tfacz8p.ap-south-1.rds.amazonaws.com",
+    "port": 5432,
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
+  },
+
+  "test": {
+    "username": "postgres",
+    "password": "password",
+    "database": "test_database",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "dialect": "postgres"
+  },
+  "production": {
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "postgres"
+  }
+}
