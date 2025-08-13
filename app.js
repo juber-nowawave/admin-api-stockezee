@@ -7,4 +7,8 @@ connect_db();
 app.use(express.urlencoded());
 app.use(express.json());
 
+app.get("/admin",(req,res)=>{
+  res.send("Hello Admin!")
+})
+
 export default app;
