@@ -30,7 +30,7 @@ export const create_user_role = async (req, res) => {
       return api_response(res, 401, 0, "unauthrized acess!", null);
     }
 
-    if (!role || !view || !add || !edit || !del) {
+    if (role == undefined || view == undefined || add == undefined || edit == undefined || del == undefined) {
       return api_response(res, 400, 0, "Missing info!", null);
     }
 
