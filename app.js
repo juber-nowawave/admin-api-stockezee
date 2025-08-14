@@ -1,14 +1,19 @@
 import express from "express";
-import dotenv from "dotenv";
-import {connect_db} from "./models/index.js";
-const app = express();
-connect_db();
-//
-app.use(express.urlencoded());
-app.use(express.json());
+import { connect_db } from "./models/index.js";
+import user_auth_router from "./routers/user_auth.Route.js";
+import user_roles_router from "./routers/user_roles.Route.js";
 
-app.get("/admin",(req,res)=>{
-  res.send("Hello Admin!")
-})
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+connect_db();
+
+app.get("/admin", (req, res) => {
+  res.send("Hello Admin!");
+});
+
+app.use("/admin/api/user-auth", user_auth_router);
+app.use("/admin/api/user-roles", user_roles_router);
 
 export default app;

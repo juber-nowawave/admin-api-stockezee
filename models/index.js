@@ -1,16 +1,18 @@
+// models/index.js
 import { Sequelize } from "sequelize";
-import dotEnv from "dotenv";
-import { readFileSync } from "fs";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-dotEnv.config();
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const db_config = JSON.parse(
-  readFileSync(path.join(__dirname, "../config/db_config.json"), "utf-8")
-);
+
+const db_config = JSON.parse(fs.readFileSync(path.join(__dirname, "../config/db_config.json"), "utf-8"));
 const production = db_config.development;
+
 const sequelize = new Sequelize(
   production.database,
   production.username,
@@ -25,12 +27,26 @@ const sequelize = new Sequelize(
   }
 );
 
+// Load all models
+const db = {};
+fs.readdirSync(__dirname)
+  .filter(file => file !== path.basename(__filename) && file.endsWith(".js"))
+  .forEach(file => {
+    import(path.join(__dirname, file)).then(module => {
+      const model = module.default(sequelize, Sequelize.DataTypes);
+      db[model.name] = model;
+    });
+  });
+
 export const connect_db = async () => {
   try {
     await sequelize.authenticate();
     console.log("DB connected successfully.");
+    await sequelize.sync({ alter: true }); // create/alter tables
   } catch (error) {
-    console.log("Error occured during connect db");
+    console.error("Error connecting to DB:", error);
   }
 };
+
 export { sequelize };
+export default db;
