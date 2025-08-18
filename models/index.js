@@ -48,5 +48,8 @@ export const connect_db = async () => {
   }
 };
 
+db.Sequelize = Sequelize;
+db.sequelize = sequelize;
+
 export { sequelize };
 export default db;
