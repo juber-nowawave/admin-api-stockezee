@@ -30,7 +30,13 @@ export const create_user_role = async (req, res) => {
       return api_response(res, 401, 0, "unauthrized acess!", null);
     }
 
-    if (role == undefined || view == undefined || add == undefined || edit == undefined || del == undefined) {
+    if (
+      role == undefined ||
+      view == undefined ||
+      add == undefined ||
+      edit == undefined ||
+      del == undefined
+    ) {
       return api_response(res, 400, 0, "Missing info!", null);
     }
 
@@ -49,7 +55,7 @@ export const create_user_role = async (req, res) => {
       view,
       edit,
       add,
-      delete:del,
+      delete: del,
     });
 
     return api_response(res, 200, 1, "Role created successfully!", null);
@@ -83,7 +89,14 @@ export const get_all_user_roles = async (req, res) => {
     }
 
     let all_roles = await db.admin_user_roles.findAll({});
-    all_roles = all_roles.map((roles) => roles.role);
+    console.log("----------", all_roles);
+
+    all_roles = all_roles.map((roles) => {
+      return {
+        id: roles.id,
+        role: roles.role,
+      };
+    });
     return api_response(res, 200, 1, "Roles fetched succesfully", all_roles);
   } catch (error) {
     return api_response(res, 500, 0, "Internal server error", null);

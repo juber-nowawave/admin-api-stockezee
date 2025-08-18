@@ -11,6 +11,27 @@ export const get_all_user = async (req, res) => {
     const { page_number, page_size, search_keyword, order_by, order_dir } =
       req.query;
 
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    if (verify.role != "Super Admin") {
+      return api_response(res, 401, 0, "unauthrized acess!", null);
+    }
+
     if (!page_number || !page_size || !order_by || !order_dir) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
@@ -23,10 +44,13 @@ export const get_all_user = async (req, res) => {
       return api_response(res, 400, 0, "Invalid order_dir value", null);
     }
 
-    const [total_records] = await db.sequelize.query(`select count(id) from app_users`,{
-        type:db.Sequelize.QueryTypes.SELECT
-    });
-    
+    const [total_records] = await db.sequelize.query(
+      `select count(id) from app_users`,
+      {
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
     if (search_keyword.trim() != "") {
       data = await db.sequelize.query(
         `
