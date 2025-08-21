@@ -7,8 +7,16 @@ import { where } from "sequelize";
 
 export const user_create = async (req, res) => {
   try {
-    const { email, user_name, user_role, mobile_no, gender, status, password } =
-      req.body;
+    const {
+      email,
+      user_name,
+      user_role,
+      role_id,
+      mobile_no,
+      gender,
+      status,
+      password,
+    } = req.body;
 
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
@@ -33,6 +41,7 @@ export const user_create = async (req, res) => {
 
     if (
       !email ||
+      !role_id ||
       !user_role ||
       !mobile_no ||
       !user_name ||
@@ -62,7 +71,7 @@ export const user_create = async (req, res) => {
         null
       );
     }
-    
+
     const isMobileExist = await db.admin_users.findOne({
       where: {
         mobile_no,
@@ -73,9 +82,10 @@ export const user_create = async (req, res) => {
       return api_response(res, 401, 0, "Mobile number already used!", null);
     }
 
-    const isRoleExist = await db.admin_user_roles.findOne({
+    const isRoleExist = await db.admin_roles.findOne({
       where: {
-        role: user_role,
+        id: role_id,
+        title: user_role,
       },
     });
 
@@ -87,7 +97,7 @@ export const user_create = async (req, res) => {
     await db.admin_users.create({
       email,
       user_name,
-      user_role,
+      role_id,
       mobile_no,
       gender,
       status,
@@ -123,9 +133,15 @@ export const all_users = async (req, res) => {
       return api_response(res, 401, 0, "unauthrized acess!", null);
     }
 
-    let all_users = await db.admin_users.findAll({
-      attributes: { exclude: ["password_hash", "created_at"] },
-    });
+    let all_users = await db.sequelize.query(
+      `
+      select au.id, au.user_name, ar.title as user_role, au.email, au.mobile_no, au.gender, au.status from admin_users au
+      inner join admin_roles ar on ar.id = au.role_id
+    `,
+      {
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
 
     return api_response(
       res,
