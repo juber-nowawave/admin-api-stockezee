@@ -183,22 +183,15 @@ export const remove_user_roles = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role != "Super Admin") {
-      return api_response(res, 401, 0, "unauthrized acess!", null);
+    if (verify.role !== "Super Admin") {
+      return api_response(res, 401, 0, "Unauthorized access!", null);
     }
 
-    const { id } = req.body;
+
+    let { id } = req.body;
     id = Number(id);
 
-    let removed_role = await db.admin_user_roles.query(
-      `
-      delete from admin_user_roles where id = :id;
-    `,
-      {
-        replacements: { id },
-        type: db.Sequelize.QueryType.DELETE,
-      }
-    );
+    let removed_role =  await db.admin_users.destroy({ where: { id } });
 
     return api_response(res, 200, 1, "Role removed succesfully", null);
   } catch (error) {
