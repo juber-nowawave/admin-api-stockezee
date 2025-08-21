@@ -154,6 +154,7 @@ export const get_all_user_roles = async (req, res) => {
       return {
         id: roles.id,
         role: roles.title,
+        status:roles.status
       };
     });
     return api_response(res, 200, 1, "Roles fetched succesfully", all_roles);
