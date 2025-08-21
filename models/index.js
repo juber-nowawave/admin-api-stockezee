@@ -42,7 +42,7 @@ export const connect_db = async () => {
   try {
     await sequelize.authenticate();
     console.log("DB connected successfully.");
-    await sequelize.sync({ alter: true }); // create/alter tables
+    await sequelize.sync({ alter: true });
   } catch (error) {
     console.error("Error connecting to DB:", error);
   }

@@ -12,9 +12,14 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      user_role: {
-        type: DataTypes.STRING,
+      role_id: {
+        type: DataTypes.INTEGER,
         allowNull: true,
+        references: {
+          model: "admin_roles",
+          key: "id",
+        },
+        onDelete: "SET NULL",
       },
       email: {
         type: DataTypes.STRING,
@@ -52,6 +57,5 @@ export default (sequelize, DataTypes) => {
     }
   );
 
-  // admin_users.sync({alter:true});
   return admin_users;
 };
