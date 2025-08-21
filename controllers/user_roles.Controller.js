@@ -191,7 +191,7 @@ export const remove_user_roles = async (req, res) => {
     let { id } = req.body;
     id = Number(id);
 
-    let removed_role =  await db.admin_users.destroy({ where: { id } });
+    let removed_role =  await db.admin_roles.destroy({ where: { id } });
 
     return api_response(res, 200, 1, "Role removed succesfully", null);
   } catch (error) {
