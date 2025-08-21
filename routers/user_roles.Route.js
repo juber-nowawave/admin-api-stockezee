@@ -4,6 +4,6 @@ const router = express.Router();
 
 router.post('/create',create_user_role);
 router.get('/all',get_all_user_roles);
-router.post('/remove',remove_user_roles);
+router.post('/delete',remove_user_roles);
 
 export default router;

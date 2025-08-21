@@ -46,7 +46,7 @@ export const user_create = async (req, res) => {
       !mobile_no ||
       !user_name ||
       !gender ||
-      !status ||
+      status == undefined ||
       !password
     ) {
       return api_response(res, 401, 0, "Missing info!", null);
@@ -190,9 +190,95 @@ export const remove_admin_user = async (req, res) => {
       return api_response(res, 404, 0, "Admin user not found", null);
     }
 
-    return api_response(res, 200, 1, "Admin user removed successfully", null);
+    return api_response(res, 200, 1, "Admin user deleted successfully", null);
   } catch (error) {
     console.error("Error occurred during delete admin user", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
+
+export const update_admin_user = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    if (verify.role !== "Super Admin") {
+      return api_response(res, 401, 0, "Unauthorized access!", null);
+    }
+
+    const { id, user_role, email, mobile_no, password_hash, ...rest } =
+      req.body;
+
+    if (!id) {
+      return api_response(res, 400, 0, "User ID is required for update", null);
+    }
+
+    const user = await db.admin_users.findByPk(id);
+    if (!user) {
+      return api_response(res, 404, 0, "Admin user not found", null);
+    }
+
+    let role_id = user.role_id;
+    if (user_role) {
+      const role = await db.admin_roles.findOne({
+        where: { title: user_role },
+      });
+      if (!role) {
+        return api_response(res, 400, 0, "Invalid role provided", null);
+      }
+      role_id = role.id;
+    }
+
+    if (email) {
+      const emailExists = await db.admin_users.findOne({
+        where: { email, id: { [db.Sequelize.Op.ne]: id } },
+      });
+      if (emailExists) {
+        return api_response(res, 400, 0, "Email already exists", null);
+      }
+    }
+
+    if (password_hash) {
+      return api_response(res, 400, 0, "Invalid request", null);
+    }
+
+    if (mobile_no) {
+      const mobileExists = await db.admin_users.findOne({
+        where: { mobile_no, id: { [db.Sequelize.Op.ne]: id } },
+      });
+      if (mobileExists) {
+        return api_response(res, 400, 0, "Mobile number already exists", null);
+      }
+    }
+
+    const updateData = {
+      ...rest,
+      role_id,
+    };
+
+    if (email) updateData.email = email;
+    if (mobile_no) updateData.mobile_no = mobile_no;
+
+    await db.admin_users.update(updateData, { where: { id } });
+
+    return api_response(res, 200, 1, "Admin user updated successfully", null);
+  } catch (error) {
+    console.error("Error occurred during edit admin user info!", error);
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
