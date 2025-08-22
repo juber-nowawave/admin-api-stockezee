@@ -217,7 +217,21 @@ export const update_admin_user = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role !== "Super Admin") {
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'edit'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
       return api_response(res, 401, 0, "Unauthorized access!", null);
     }
 
@@ -279,6 +293,86 @@ export const update_admin_user = async (req, res) => {
     return api_response(res, 200, 1, "Admin user updated successfully", null);
   } catch (error) {
     console.error("Error occurred during edit admin user info!", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
+
+export const get_specific_admin_user = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'view'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(res, 401, 0, "Unauthorized access!", null);
+    }
+
+    const { id } = req.query;
+
+    if (!id) {
+      return api_response(res, 400, 0, "User ID is required", null);
+    }
+
+    const user = await db.admin_users.findOne({
+      where: { id },
+      attributes: { exclude: ["password_hash", "created_at"] },
+    });
+
+    if (!user) {
+      return api_response(res, 404, 0, "Admin user not found", null);
+    }
+
+    const role = await db.admin_roles.findOne({
+      where: { id: user.role_id },
+    });
+
+    if (!role) {
+      return api_response(res, 400, 0, "Invalid role provided", null);
+    }
+
+    const userData = user.get({ plain: true });
+    const data = {
+      ...userData,
+      user_role: role.title,
+    };
+
+    return api_response(
+      res,
+      200,
+      1,
+      "Admin user details fetched successfully",
+      data
+    );
+  } catch (error) {
+    console.error("Error occurred while fetching user details!", error);
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
