@@ -35,8 +35,28 @@ export const user_create = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role != "Super Admin") {
-      return api_response(res, 401, 0, "unauthrized acess!", null);
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'add'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to create user",
+        null
+      );
     }
 
     if (
@@ -129,8 +149,28 @@ export const all_users = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role != "Super Admin") {
-      return api_response(res, 401, 0, "unauthrized acess!", null);
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'view'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you do'nt have permission to view user info",
+        null
+      );
     }
 
     let all_users = await db.sequelize.query(
@@ -177,8 +217,28 @@ export const remove_admin_user = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role !== "Super Admin") {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'delete'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to remove user",
+        null
+      );
     }
 
     let { id } = req.body;
@@ -232,7 +292,13 @@ export const update_admin_user = async (req, res) => {
     );
 
     if (is_accessible.length == 0) {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you do'nt have permission to update user info",
+        null
+      );
     }
 
     const { id, user_role, email, mobile_no, password_hash, ...rest } =
@@ -332,7 +398,13 @@ export const get_specific_admin_user = async (req, res) => {
     );
 
     if (is_accessible.length == 0) {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you do'nt have permission to view user info",
+        null
+      );
     }
 
     const { id } = req.query;
