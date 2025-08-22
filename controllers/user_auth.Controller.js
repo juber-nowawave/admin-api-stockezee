@@ -68,6 +68,7 @@ export const user_login = async (req, res) => {
       id: user.id,
       email: user.email,
       role: user_role,
+      role_id:user.role_id,
     };
 
     const token = await generate_token(payload);

@@ -198,3 +198,50 @@ export const remove_user_roles = async (req, res) => {
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
+
+export const update_user_roles = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    if (verify.role !== "Super Admin") {
+      return api_response(res, 401, 0, "Unauthorized access!", null);
+    }
+
+    const { id, user_role, email, mobile_no, password_hash, ...rest } =
+      req.body;
+
+    if (!id) {
+      return api_response(res, 400, 0, "User ID is required for update", null);
+    }
+
+    const user = await db.admin_users.findByPk(id);
+    if (!user) {
+      return api_response(res, 404, 0, "Admin user not found", null);
+    }
+
+    let role_id = user.role_id;
+
+    await db.admin_users.update(updateData, { where: { id } });
+
+    return api_response(res, 200, 1, "Admin user updated successfully", null);
+  } catch (error) {
+    console.error("Error occurred during edit admin user info!", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
