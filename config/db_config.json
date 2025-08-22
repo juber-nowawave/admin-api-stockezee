@@ -20,7 +20,13 @@
     "database": "stockezee",
     "host": "stockezee-proxy.proxy-cajm4tfacz8p.ap-south-1.rds.amazonaws.com",
     "port": 5432,
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   },
   "test": {
     "use_env_variable": "DATABASE_URL",
