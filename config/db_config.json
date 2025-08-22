@@ -14,15 +14,15 @@
     }
   },
 
-  "test": {
-    "username": "postgres",
-    "password": "password",
-    "database": "test_database",
-    "host": "127.0.0.1",
+  "production": {
+    "username": "stockezee_proxy_user",
+    "password": "stockezee2684",
+    "database": "stockezee",
+    "host": "stockezee-proxy.proxy-cajm4tfacz8p.ap-south-1.rds.amazonaws.com",
     "port": 5432,
     "dialect": "postgres"
   },
-  "production": {
+  "test": {
     "use_env_variable": "DATABASE_URL",
     "dialect": "postgres"
   }
