@@ -242,7 +242,10 @@ export const remove_admin_user = async (req, res) => {
     }
 
     let { id } = req.body;
-    id = Number(id);
+
+    if (typeof id != "number") {
+      return api_response(res, 400, 0, "Id should be number!", null);
+    }
 
     const deleted = await db.admin_users.destroy({ where: { id } });
 

@@ -6,6 +6,8 @@ import db from "../models/index.js";
 import { where } from "sequelize";
 
 export const create_user_role = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
@@ -25,54 +27,55 @@ export const create_user_role = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role != "Super Admin") {
-      return api_response(res, 401, 0, "unauthrized acess!", null);
+    if (verify.role !== "Super Admin") {
+      return api_response(res, 401, 0, "Unauthorized access!", null);
     }
 
     const { role, active, page_permission } = req.body;
 
-    if (
-      role == undefined ||
-      page_permission == undefined ||
-      active == undefined
-    ) {
+    if (!role || !page_permission) {
       return api_response(res, 400, 0, "Missing info!", null);
     }
 
-    if (page_permission.length == 0) {
+    if (page_permission.length === 0) {
       return api_response(
         res,
         400,
         0,
-        "Please provide at-least one page permission!",
+        "Please provide at least one page permission!",
         null
       );
     }
 
     const isRoleExist = await db.admin_roles.findOne({
-      where: {
-        title: role,
-      },
+      where: { title: role },
     });
-
     if (isRoleExist) {
-      return api_response(res, 401, 0, "Role already exist!", null);
+      return api_response(res, 401, 0, "Role already exists!", null);
     }
 
     let permissions_map = {};
     let all_permissions = await db.admin_page_permission.findAll({});
-    all_permissions.forEach(obj => {
-      permissions_map[obj.name] = obj.id
+    all_permissions.forEach((obj) => {
+      permissions_map[obj.name] = obj.id;
     });
 
-    const created_role = await db.admin_roles.create({
-      title: role,
-      status: true,
-    });
+    const created_role = await db.admin_roles.create(
+      {
+        title: role,
+        status: active,
+      },
+      { transaction: t }
+    );
 
     const permissionRows = [];
 
     for (const obj of page_permission) {
+      if (typeof obj.page_id != "number") {
+        await t.rollback();
+        return api_response(res, 400, 0, "Page id should be number!", null);
+      }
+
       const page = await db.admin_pages.findOne({
         where: { id: obj.page_id, name: obj.module },
       });
@@ -110,15 +113,21 @@ export const create_user_role = async (req, res) => {
     }
 
     if (permissionRows.length > 0) {
-      await db.admin_role_page_permission.bulkCreate(permissionRows);
+      await db.admin_role_page_permission.bulkCreate(permissionRows, {
+        transaction: t,
+      });
     }
+
+    await t.commit();
 
     return api_response(res, 200, 1, "Role created successfully!", {
       role: created_role,
       permissions: permissionRows,
     });
   } catch (error) {
-    console.log("Error occured during create admin role!", error);
+    console.log("Error occurred during create admin role!", error);
+
+    await t.rollback();
 
     return api_response(res, 500, 0, "Internal server error", null);
   }
@@ -154,7 +163,7 @@ export const get_all_user_roles = async (req, res) => {
       return {
         id: roles.id,
         role: roles.title,
-        status:roles.status
+        status: roles.status,
       };
     });
     return api_response(res, 200, 1, "Roles fetched succesfully", all_roles);
@@ -187,11 +196,13 @@ export const remove_user_roles = async (req, res) => {
       return api_response(res, 401, 0, "Unauthorized access!", null);
     }
 
-
     let { id } = req.body;
-    id = Number(id);
+    
+    if (typeof id != "number") {
+      return api_response(res, 400, 0, "Id should be number!", null);
+    }
 
-    let removed_role =  await db.admin_roles.destroy({ where: { id } });
+    let removed_role = await db.admin_roles.destroy({ where: { id } });
 
     return api_response(res, 200, 1, "Role deleted succesfully", null);
   } catch (error) {
