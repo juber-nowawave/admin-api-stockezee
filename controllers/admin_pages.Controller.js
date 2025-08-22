@@ -38,6 +38,7 @@ export const get_all_admin_pages = async (req, res) => {
     
     all_pages = all_pages.map((page) => {
         return {
+            page_id:page.id,
             module: page.name,
             ...permissions,
         };
