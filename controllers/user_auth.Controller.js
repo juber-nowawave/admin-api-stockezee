@@ -64,6 +64,8 @@ export const user_login = async (req, res) => {
       }
     });
 
+    page_permission2.push(page_obj);
+    
     const payload = {
       id: user.id,
       email: user.email,
