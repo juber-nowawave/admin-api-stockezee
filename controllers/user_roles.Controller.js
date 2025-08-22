@@ -120,10 +120,7 @@ export const create_user_role = async (req, res) => {
 
     await t.commit();
 
-    return api_response(res, 200, 1, "Role created successfully!", {
-      role: created_role,
-      permissions: permissionRows,
-    });
+    return api_response(res, 200, 1, "Role created successfully!", null);
   } catch (error) {
     console.log("Error occurred during create admin role!", error);
 
@@ -197,7 +194,7 @@ export const remove_user_roles = async (req, res) => {
     }
 
     let { id } = req.body;
-    
+
     if (typeof id != "number") {
       return api_response(res, 400, 0, "Id should be number!", null);
     }
@@ -251,6 +248,108 @@ export const update_user_roles = async (req, res) => {
     await db.admin_users.update(updateData, { where: { id } });
 
     return api_response(res, 200, 1, "Admin user updated successfully", null);
+  } catch (error) {
+    console.error("Error occurred during edit admin user info!", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
+
+export const get_specific_user_roles = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    if (verify.role !== "Super Admin") {
+      return api_response(res, 401, 0, "Unauthorized access!", null);
+    }
+
+    const { id } = req.query;
+
+    if (!id) {
+      return api_response(res, 400, 0, "Role ID is required", null);
+    }
+
+    // if (typeof id != "number") {
+    //   return api_response(res, 400, 0, "Id should be number", null);
+    // }
+
+    const page_permission = await db.sequelize.query(
+      `
+      SELECT 
+       ar.id AS role_id, 
+       ar.title AS role_name, 
+       ar.status AS active,
+       ap.id AS page_id,
+       ap.name AS page_name, 
+       app.id AS permission_id,
+       app.name AS permission,
+         CASE 
+          WHEN arpp.id IS NULL THEN false 
+          ELSE true 
+         END AS has_permission
+       FROM admin_roles ar
+      CROSS JOIN admin_pages ap
+      CROSS JOIN admin_page_permission app
+      LEFT JOIN admin_role_page_permission arpp 
+       ON arpp.role_id = ar.id 
+      AND arpp.page_id = ap.id 
+      AND arpp.permission_id = app.id
+      WHERE ar.id = :id 
+    `,
+      {
+        replacements: { id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (page_permission.length == 0) {
+      return api_response(res, 401, 0, "Pages not found!", null);
+    }
+
+    let role_name = page_permission[0].role_name;
+    let is_active = page_permission[0].active;
+    let page = page_permission[0].page_name;
+    let page_obj = {
+      page_id: page_permission[0].page_id,
+      module: page,
+    };
+    
+    let page_permission2 = [];
+    page_permission.forEach((obj) => {
+      if (obj.page_name != page) {
+        page_permission2.push(page_obj);
+        page_obj = {};
+        page_obj["page_id"] = obj.page_id
+        page_obj["module"] = obj.page_name;
+        page_obj[obj.permission] = obj.has_permission;
+        page = obj.page_name;
+      } else {
+        page_obj[obj.permission] = obj.has_permission
+      }
+    });
+
+    const data = {
+      role_name,
+      active: is_active,
+      permission: page_permission2,
+    };
+
+    return api_response(res, 200, 1, "Role info fetched successfully!", data);
   } catch (error) {
     console.error("Error occurred during edit admin user info!", error);
     return api_response(res, 500, 0, "Internal server error", null);
