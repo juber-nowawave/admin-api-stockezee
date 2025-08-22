@@ -11,7 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const db_config = JSON.parse(fs.readFileSync(path.join(__dirname, "../config/db_config.json"), "utf-8"));
-const production = db_config.development;
+const production = db_config[process.env.NODE_ENV];
+console.log('---------',production);
 
 const sequelize = new Sequelize(
   production.database,
