@@ -6,8 +6,8 @@ import db from "../models/index.js";
 import { where } from "sequelize";
 
 export const create_user_role = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const t = await sequelize.transaction();
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
       return api_response(
@@ -211,8 +211,8 @@ export const remove_user_roles = async (req, res) => {
 };
 
 export const update_user_roles = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const t = await sequelize.transaction();
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
       return api_response(
