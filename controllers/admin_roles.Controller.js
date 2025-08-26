@@ -5,7 +5,7 @@ import { sequelize } from "../models/index.js";
 import db from "../models/index.js";
 import { where } from "sequelize";
 
-export const create_user_role = async (req, res) => {
+export const create_admin_role = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const header = req.headers["authorization"];
@@ -26,8 +26,28 @@ export const create_user_role = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role !== "Super Admin") {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'role_management' and app.name = 'add'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to create admin roles",
+        null
+      );
     }
 
     let { role, active, page_permission } = req.body;
@@ -133,7 +153,7 @@ export const create_user_role = async (req, res) => {
   }
 };
 
-export const get_all_user_roles = async (req, res) => {
+export const get_all_admin_roles = async (req, res) => {
   try {
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
@@ -153,10 +173,29 @@ export const get_all_user_roles = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role != "Super Admin") {
-      return api_response(res, 401, 0, "unauthrized acess!", null);
-    }
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'role_management' and app.name = 'view'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
 
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to view admin roles",
+        null
+      );
+    }
     let all_roles = await db.admin_roles.findAll({});
 
     all_roles = all_roles.map((roles) => {
@@ -172,7 +211,7 @@ export const get_all_user_roles = async (req, res) => {
   }
 };
 
-export const remove_user_roles = async (req, res) => {
+export const remove_admin_roles = async (req, res) => {
   try {
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
@@ -192,8 +231,28 @@ export const remove_user_roles = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role !== "Super Admin") {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'role_management' and app.name = 'delete'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to delete admin roles",
+        null
+      );
     }
 
     let { id } = req.body;
@@ -210,7 +269,7 @@ export const remove_user_roles = async (req, res) => {
   }
 };
 
-export const update_user_roles = async (req, res) => {
+export const update_admin_roles = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const header = req.headers["authorization"];
@@ -231,18 +290,44 @@ export const update_user_roles = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role !== "Super Admin") {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
-    }
-    let { role_id, active, page_permission } = req.body;
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'role_management' and app.name = 'edit'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
 
-    if (!role_id || !page_permission) {
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to update admin role info",
+        null
+      );
+    }
+
+    let { role_id, role_name, active, page_permission } = req.body;
+
+    if (!role_id || !page_permission || !role_name) {
       await t.rollback();
       return api_response(res, 400, 0, "Missing info!", null);
     }
 
+    role_name = role_name.toLowerCase();
+
     await db.admin_roles.update(
-      { status: active },
+      {
+        title: role_name,
+        status: active,
+      },
       { where: { id: role_id }, transaction: t }
     );
 
@@ -340,7 +425,7 @@ export const update_user_roles = async (req, res) => {
   }
 };
 
-export const get_specific_user_roles = async (req, res) => {
+export const get_specific_admin_roles = async (req, res) => {
   try {
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
@@ -360,8 +445,28 @@ export const get_specific_user_roles = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role !== "Super Admin") {
-      return api_response(res, 401, 0, "Unauthorized access!", null);
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'role_management' and app.name = 'view'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to view admin role info",
+        null
+      );
     }
 
     const { id } = req.query;
