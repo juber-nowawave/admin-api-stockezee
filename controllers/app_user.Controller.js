@@ -160,15 +160,15 @@ export const get_all_orders = async (req, res) => {
       }
     );
 
-    // if (is_accessible.length == 0) {
-    //   return api_response(
-    //     res,
-    //     401,
-    //     0,
-    //     "Unauthorized access!, you don't have permission to view orders",
-    //     null
-    //   );
-    // }
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to view orders",
+        null
+      );
+    }
 
     if (!page_number || !page_size || !order_by || !order_dir) {
       return api_response(res, 401, 0, "Missing parameters!", null);
