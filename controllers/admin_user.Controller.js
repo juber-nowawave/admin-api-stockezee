@@ -41,7 +41,7 @@ export const user_create = async (req, res) => {
       inner join admin_role_page_permission arpp on ar.id = arpp.role_id
       inner join admin_pages ap on arpp.page_id = ap.id
       inner join admin_page_permission app on arpp.permission_id = app.id
-      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'add'
+      where ar.id = :role_id and ap.name = 'admin_management' and app.name = 'add'
     `,
       {
         replacements: { role_id: verify.role_id },
@@ -160,7 +160,7 @@ export const all_users = async (req, res) => {
       inner join admin_role_page_permission arpp on ar.id = arpp.role_id
       inner join admin_pages ap on arpp.page_id = ap.id
       inner join admin_page_permission app on arpp.permission_id = app.id
-      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'view'
+      where ar.id = :role_id and ap.name = 'admin_management' and app.name = 'view'
     `,
       {
         replacements: { role_id: verify.role_id },
@@ -228,7 +228,7 @@ export const remove_admin_user = async (req, res) => {
       inner join admin_role_page_permission arpp on ar.id = arpp.role_id
       inner join admin_pages ap on arpp.page_id = ap.id
       inner join admin_page_permission app on arpp.permission_id = app.id
-      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'delete'
+      where ar.id = :role_id and ap.name = 'admin_management' and app.name = 'delete'
     `,
       {
         replacements: { role_id: verify.role_id },
@@ -291,7 +291,7 @@ export const update_admin_user = async (req, res) => {
       inner join admin_role_page_permission arpp on ar.id = arpp.role_id
       inner join admin_pages ap on arpp.page_id = ap.id
       inner join admin_page_permission app on arpp.permission_id = app.id
-      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'edit'
+      where ar.id = :role_id and ap.name = 'admin_management' and app.name = 'edit'
     `,
       {
         replacements: { role_id: verify.role_id },
@@ -397,7 +397,7 @@ export const get_specific_admin_user = async (req, res) => {
       inner join admin_role_page_permission arpp on ar.id = arpp.role_id
       inner join admin_pages ap on arpp.page_id = ap.id
       inner join admin_page_permission app on arpp.permission_id = app.id
-      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'view'
+      where ar.id = :role_id and ap.name = 'admin_management' and app.name = 'view'
     `,
       {
         replacements: { role_id: verify.role_id },
