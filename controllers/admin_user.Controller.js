@@ -7,7 +7,7 @@ import { where } from "sequelize";
 
 export const user_create = async (req, res) => {
   try {
-    const {
+    let {
       email,
       user_name,
       user_role,
@@ -72,6 +72,11 @@ export const user_create = async (req, res) => {
       return api_response(res, 401, 0, "Missing info!", null);
     }
 
+    email = email.toLowerCase();
+    user_name = user_name.toLowerCase();
+    gender = gender.toLowerCase();
+    user_role = user_role.toLowerCase();
+    
     const isEmailExist = await db.admin_users.findOne({
       where: {
         email,
