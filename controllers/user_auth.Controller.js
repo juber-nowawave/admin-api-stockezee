@@ -49,7 +49,7 @@ export const user_login = async (req, res) => {
     let user_role = page_permission[0].user_role;
     let page = page_permission[0].pages;
     let page_obj = {
-      module:page
+      module: page,
     };
     let page_permission2 = [];
     page_permission = page_permission.forEach((obj) => {
@@ -65,12 +65,12 @@ export const user_login = async (req, res) => {
     });
 
     page_permission2.push(page_obj);
-    
+
     const payload = {
       id: user.id,
       email: user.email,
       role: user_role,
-      role_id:user.role_id,
+      role_id: user.role_id,
     };
 
     const token = await generate_token(payload);
@@ -95,6 +95,45 @@ export const user_login = async (req, res) => {
     );
   } catch (error) {
     console.error("Error occured during admin login!", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
+
+export const reset_pass = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(res, 401, 0, "Authorization token missing or malformed", null);
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      return api_response(res, 400, 0, "Missing parameter", null);
+    }
+
+    const email = verify.email;
+    const user = await db.admin_users.findOne({ where: { email } });
+
+    if (!user) {
+      return api_response(res, 404, 0, "User does not exist!", null);
+    }
+
+    const hash_pass = await encode_bcrypt(password);
+
+    await db.admin_users.update(
+      { password_hash: hash_pass },
+      { where: { email } }
+    );
+
+    return api_response(res, 200, 1, "Password changed successfully!", null);
+  } catch (error) {
+    console.error("Error occurred during change password!", error);
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
