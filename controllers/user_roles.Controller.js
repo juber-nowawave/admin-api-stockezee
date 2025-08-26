@@ -6,9 +6,8 @@ import db from "../models/index.js";
 import { where } from "sequelize";
 
 export const create_user_role = async (req, res) => {
-  const t = await sequelize.transaction();
-
   try {
+    const t = await sequelize.transaction();
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
       return api_response(
@@ -31,7 +30,7 @@ export const create_user_role = async (req, res) => {
       return api_response(res, 401, 0, "Unauthorized access!", null);
     }
 
-    const { role, active, page_permission } = req.body;
+    let { role, active, page_permission } = req.body;
 
     if (!role || !page_permission) {
       return api_response(res, 400, 0, "Missing info!", null);
@@ -47,6 +46,12 @@ export const create_user_role = async (req, res) => {
       );
     }
 
+    if (typeof active !== "boolean") {
+      await t.rollback();
+      return api_response(res, 400, 0, "Active value should be boolean", null);
+    }
+
+    role = role.toLowerCase();
     const isRoleExist = await db.admin_roles.findOne({
       where: { title: role },
     });
@@ -123,9 +128,7 @@ export const create_user_role = async (req, res) => {
     return api_response(res, 200, 1, "Role created successfully!", null);
   } catch (error) {
     console.log("Error occurred during create admin role!", error);
-
     await t.rollback();
-
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
@@ -209,6 +212,7 @@ export const remove_user_roles = async (req, res) => {
 
 export const update_user_roles = async (req, res) => {
   try {
+    const t = await sequelize.transaction();
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
       return api_response(
@@ -230,26 +234,108 @@ export const update_user_roles = async (req, res) => {
     if (verify.role !== "Super Admin") {
       return api_response(res, 401, 0, "Unauthorized access!", null);
     }
+    let { role_id, active, page_permission } = req.body;
 
-    const { id, user_role, email, mobile_no, password_hash, ...rest } =
-      req.body;
-
-    if (!id) {
-      return api_response(res, 400, 0, "User ID is required for update", null);
+    if (!role_id || !page_permission) {
+      await t.rollback();
+      return api_response(res, 400, 0, "Missing info!", null);
     }
 
-    const user = await db.admin_users.findByPk(id);
-    if (!user) {
-      return api_response(res, 404, 0, "Admin user not found", null);
+    await db.admin_roles.update(
+      { status: active },
+      { where: { id: role_id }, transaction: t }
+    );
+
+    if (!Array.isArray(page_permission) || page_permission.length === 0) {
+      await t.rollback();
+      return api_response(
+        res,
+        400,
+        0,
+        "Please provide at least one page permission!",
+        null
+      );
     }
 
-    let role_id = user.role_id;
+    if (typeof active !== "boolean") {
+      await t.rollback();
+      return api_response(res, 400, 0, "Active value should be boolean", null);
+    }
 
-    await db.admin_users.update(updateData, { where: { id } });
+    const isRoleExist = await db.admin_roles.findOne({
+      where: { id: role_id },
+    });
 
-    return api_response(res, 200, 1, "Admin user updated successfully", null);
+    if (!isRoleExist) {
+      await t.rollback();
+      return api_response(res, 404, 0, "Role not exists!", null);
+    }
+
+    let permissions_map = {};
+    let all_permissions = await db.admin_page_permission.findAll({});
+    all_permissions.forEach((obj) => {
+      permissions_map[obj.name.toLowerCase()] = obj.id;
+    });
+
+    await db.admin_role_page_permission.destroy({
+      where: { role_id },
+      transaction: t,
+    });
+
+    const permissionRows = [];
+
+    for (const obj of page_permission) {
+      if (typeof obj.page_id != "number") {
+        await t.rollback();
+        return api_response(res, 400, 0, "Page id should be number!", null);
+      }
+
+      const page = await db.admin_pages.findOne({
+        where: { id: obj.page_id, name: obj.module },
+      });
+
+      if (page) {
+        if (obj.view) {
+          permissionRows.push({
+            role_id: role_id,
+            page_id: obj.page_id,
+            permission_id: permissions_map["view"],
+          });
+        }
+        if (obj.add) {
+          permissionRows.push({
+            role_id: role_id,
+            page_id: obj.page_id,
+            permission_id: permissions_map["add"],
+          });
+        }
+        if (obj.edit) {
+          permissionRows.push({
+            role_id: role_id,
+            page_id: obj.page_id,
+            permission_id: permissions_map["edit"],
+          });
+        }
+        if (obj.del) {
+          permissionRows.push({
+            role_id: role_id,
+            page_id: obj.page_id,
+            permission_id: permissions_map["delete"],
+          });
+        }
+      }
+    }
+
+    if (permissionRows.length > 0) {
+      await db.admin_role_page_permission.bulkCreate(permissionRows, {
+        transaction: t,
+      });
+    }
+    await t.commit();
+    return api_response(res, 200, 1, "Role info updated successfully", null);
   } catch (error) {
-    console.error("Error occurred during edit admin user info!", error);
+    console.error("Error occurred during update role info!", error);
+    await t.rollback();
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
@@ -320,7 +406,7 @@ export const get_specific_user_roles = async (req, res) => {
     if (page_permission.length == 0) {
       return api_response(res, 401, 0, "Pages not found!", null);
     }
-
+    let role_id = page_permission[0].role_id;
     let role_name = page_permission[0].role_name;
     let is_active = page_permission[0].active;
     let page = page_permission[0].page_name;
@@ -328,22 +414,23 @@ export const get_specific_user_roles = async (req, res) => {
       page_id: page_permission[0].page_id,
       module: page,
     };
-    
+
     let page_permission2 = [];
     page_permission.forEach((obj) => {
       if (obj.page_name != page) {
         page_permission2.push(page_obj);
         page_obj = {};
-        page_obj["page_id"] = obj.page_id
+        page_obj["page_id"] = obj.page_id;
         page_obj["module"] = obj.page_name;
         page_obj[obj.permission] = obj.has_permission;
         page = obj.page_name;
       } else {
-        page_obj[obj.permission] = obj.has_permission
+        page_obj[obj.permission] = obj.has_permission;
       }
     });
 
     const data = {
+      role_id,
       role_name,
       active: is_active,
       permission: page_permission2,
