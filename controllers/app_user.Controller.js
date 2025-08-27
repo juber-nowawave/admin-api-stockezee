@@ -76,7 +76,10 @@ export const get_all_user = async (req, res) => {
       data = await db.sequelize.query(
         `
         select * from 
-        (select * from app_users where user_name like '%${search_keyword}%' order by id asc limit :page_size offset :offset_value)
+        (select id, user_name, email, is_email_verify, mobile_no, is_mobile_no_verify,
+         gender, login_method, last_login, created_at from app_users
+         where user_name like '%${search_keyword}%'
+         order by id asc limit :page_size offset :offset_value)
         order by ${order_by} ${order_dir};    
       `,
         {
@@ -92,7 +95,9 @@ export const get_all_user = async (req, res) => {
       data = await db.sequelize.query(
         `
         select * from 
-        (select * from app_users order by id asc limit :page_size offset :offset_value) 
+        (select id, user_name, email, is_email_verify, mobile_no, is_mobile_no_verify,
+         gender, login_method, last_login, created_at from app_users 
+         order by id asc limit :page_size offset :offset_value) 
         order by ${order_by} ${order_dir};    
       `,
         {
@@ -118,7 +123,76 @@ export const get_all_user = async (req, res) => {
       response
     );
   } catch (error) {
-    console.error('Error occured during fetched app users',error);
+    console.error("Error occured during fetched app users", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
+
+export const get_specific_user = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'user_management' and app.name = 'view'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to view users",
+        null
+      );
+    }
+
+    const { id } = req.query;
+
+    if (!id) {
+      return api_response(res, 401, 0, "Missing id!", null);
+    }
+
+    const [data] = await db.sequelize.query(
+      `
+       select id, user_name, email, is_email_verify, country_code, mobile_no, is_mobile_no_verify, 
+       profile_pic, gender, dob, country, state, city, pin_code, occupation, industry, login_method,
+       social_id, last_login, created_at from app_users where id = :id
+      `,
+      {
+        replacements: { id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return api_response(res, 200, 1, "user data fetched successfully!", data);
+  } catch (error) {
+    console.error("Error occured during fetched app user", error);
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
@@ -244,7 +318,7 @@ export const get_all_orders = async (req, res) => {
       response
     );
   } catch (error) {
-    console.error('Error ocured during fetch order list',error);
+    console.error("Error ocured during fetch order list", error);
     return api_response(res, 500, 0, "Internal server error", null);
   }
 };
