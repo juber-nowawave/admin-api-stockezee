@@ -178,9 +178,9 @@ export const get_specific_user = async (req, res) => {
       return api_response(res, 401, 0, "Missing id!", null);
     }
 
-    const [data] = await db.sequelize.query(
+    const [user_info] = await db.sequelize.query(
       `
-       select id, user_name, email, is_email_verify, country_code, mobile_no, is_mobile_no_verify, 
+       select id as user_id, user_name, email, is_email_verify, country_code, mobile_no, is_mobile_no_verify, 
        profile_pic, gender, dob, country, state, city, pin_code, occupation, industry, login_method,
        social_id, last_login, created_at from app_users where id = :id
       `,
@@ -189,6 +189,26 @@ export const get_specific_user = async (req, res) => {
         type: db.Sequelize.QueryTypes.SELECT,
       }
     );
+
+    const order_info = await db.sequelize.query(
+      `
+      select pp.name as plan_type, pp.duration as plan_duration, pp.plan_id, po.order_id, ps.id as membership_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
+        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
+        inner join prime_orders po using(order_id)
+        inner join app_users au on au.id = po.user_id
+        inner join prime_plans pp using(plan_id) 
+        where po.user_id = :id
+     `,
+      {
+        replacements: { id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const data = {
+      user_detail: user_info,
+      order_info: order_info,
+    };
 
     return api_response(res, 200, 1, "user data fetched successfully!", data);
   } catch (error) {
@@ -257,7 +277,9 @@ export const get_all_orders = async (req, res) => {
     }
 
     const [total_records] = await db.sequelize.query(
-      `select count(id) from prime_subscriptions`,
+      `select count(po.order_id) as count from prime_subscriptions ps
+        inner join prime_orders po using(order_id)
+        inner join app_users au on au.id = po.user_id`,
       {
         type: db.Sequelize.QueryTypes.SELECT,
       }
@@ -268,7 +290,7 @@ export const get_all_orders = async (req, res) => {
         `
         select * from
         (select au.id as user_id, au.user_name, au.email, au.mobile_no, po.order_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
+        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
         inner join prime_orders po using(order_id)
         inner join app_users au on au.id = po.user_id
         where au.user_name like '%${search_keyword}%'
@@ -289,7 +311,7 @@ export const get_all_orders = async (req, res) => {
         `
         select * from
         (select au.id as user_id, au.user_name, au.email, au.mobile_no, po.order_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
+        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
         inner join prime_orders po using(order_id)
         inner join app_users au on au.id = po.user_id
         order by user_id asc limit :page_size offset :offset_value)
