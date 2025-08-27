@@ -25,7 +25,7 @@ export const get_all_admin_pages = async (req, res) => {
       return api_response(res, 400, 0, "Invalid token!", null);
     }
 
-    if (verify.role != "Super Admin") {
+    if (verify.role != "super admin") {
       return api_response(res, 401, 0, "unauthrized acess!", null);
     }
 
