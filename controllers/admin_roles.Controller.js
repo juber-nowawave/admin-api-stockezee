@@ -1,9 +1,7 @@
 import api_response from "../utils/api_response.js";
-import { encode_bcrypt, decode_bcrypt } from "../utils/bcrypt.js";
 import { generate_token, verify_token } from "../utils/jwt.js";
 import { sequelize } from "../models/index.js";
 import db from "../models/index.js";
-import { where } from "sequelize";
 
 export const create_admin_role = async (req, res) => {
   const t = await sequelize.transaction();
@@ -534,6 +532,8 @@ export const get_specific_admin_roles = async (req, res) => {
       }
     });
 
+    page_permission2.push(page_obj);
+  
     const data = {
       role_id,
       role_name,

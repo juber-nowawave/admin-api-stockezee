@@ -5,6 +5,8 @@ import user_roles_router from "./routers/admin_roles.Route.js";
 import admin_user_router from "./routers/admin_user.Route.js";
 import app_user_router from "./routers/app_user.Route.js";
 import admin_pages_router from "./routers/admin_pages.Routes.js";
+import admin_dashboard_router from "./routers/admin_dashboard.Routes.js";
+
 import cors from "cors";
 
 const app = express();
@@ -25,5 +27,6 @@ app.use("/admin/api/admin-user", admin_user_router);
 app.use("/admin/api/user-roles", user_roles_router);
 app.use("/admin/api/app-user",app_user_router);
 app.use("/admin/api/pages",admin_pages_router);
+app.use("/admin/api/dashboard",admin_dashboard_router);
 
 export default app;

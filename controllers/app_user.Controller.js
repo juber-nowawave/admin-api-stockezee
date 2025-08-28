@@ -1,10 +1,6 @@
 import api_response from "../utils/api_response.js";
-import { encode_bcrypt, decode_bcrypt } from "../utils/bcrypt.js";
 import { generate_token, verify_token } from "../utils/jwt.js";
-import { sequelize } from "../models/index.js";
 import db from "../models/index.js";
-import { where } from "sequelize";
-import { types } from "pg";
 
 export const get_all_user = async (req, res) => {
   try {
