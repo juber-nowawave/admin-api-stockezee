@@ -4,9 +4,6 @@ import db from "../models/index.js";
 
 export const get_all_user = async (req, res) => {
   try {
-    const { page_number, page_size, search_keyword, order_by, order_dir } =
-      req.query;
-
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
       return api_response(
@@ -49,7 +46,16 @@ export const get_all_user = async (req, res) => {
       );
     }
 
-    if (!page_number || !page_size || !order_by || !order_dir) {
+    let {
+      page_number,
+      page_size,
+      search_keyword,
+      search_by,
+      order_by,
+      order_dir,
+    } = req.query;
+
+    if (!page_number || !page_size || !order_by || !order_dir || search_keyword === undefined || search_by === undefined) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
 
@@ -68,20 +74,21 @@ export const get_all_user = async (req, res) => {
       }
     );
 
-    if (search_keyword.trim() != "") {
+    search_keyword = search_keyword.trim();
+    search_by = search_by.trim();
+    if (search_keyword != "" && search_by != "") {
       data = await db.sequelize.query(
         `
         select * from 
         (select id, user_name, email, is_email_verify, mobile_no, is_mobile_no_verify,
          gender, login_method, last_login, created_at from app_users
-         where user_name like '%${search_keyword}%'
+         where ${search_by} like '%${search_keyword}%'
          order by id asc limit :page_size offset :offset_value)
         order by ${order_by} ${order_dir};    
       `,
         {
           replacements: {
             page_size: Number(page_size),
-            search_keyword: search_keyword.trim(),
             offset_value,
           },
           type: db.Sequelize.QueryTypes.SELECT,
@@ -215,9 +222,6 @@ export const get_specific_user = async (req, res) => {
 
 export const get_all_orders = async (req, res) => {
   try {
-    const { page_number, page_size, search_keyword, order_by, order_dir } =
-      req.query;
-
     const header = req.headers["authorization"];
     if (!header || !header.startsWith("Bearer ")) {
       return api_response(
@@ -260,11 +264,29 @@ export const get_all_orders = async (req, res) => {
       );
     }
 
-    if (!page_number || !page_size || !order_by || !order_dir) {
+    let {
+      page_number,
+      page_size,
+      search_keyword,
+      search_by,
+      order_by,
+      order_dir,
+      order_type,
+    } = req.query;
+
+    if (
+      !page_number ||
+      !page_size ||
+      !order_by ||
+      !order_dir ||
+      !order_type ||
+      search_keyword === undefined ||
+      search_by === undefined
+    ) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
 
-    let data;
+    let data = [];
     const offset_value = Number(page_size) * (Number(page_number) - 1);
     const valid_dirs = ["asc", "desc"];
 
@@ -273,23 +295,53 @@ export const get_all_orders = async (req, res) => {
     }
 
     const [total_records] = await db.sequelize.query(
-      `select count(po.order_id) as count from prime_subscriptions ps
-        inner join prime_orders po using(order_id)
-        inner join app_users au on au.id = po.user_id`,
+      `select count(po.order_id) as count from prime_orders po
+        left join prime_subscriptions ps using(order_id)
+        left join app_users au on au.id = po.user_id`,
       {
         type: db.Sequelize.QueryTypes.SELECT,
       }
     );
 
-    if (search_keyword.trim() != "") {
+    search_by = search_by.trim();
+    search_keyword = search_keyword.trim();
+
+    let where_query = `where au.${search_by} like '%${search_keyword}%'`;
+
+    if (search_by === "order_id" && !isNaN(search_keyword)) {
+      where_query = `where po.${search_by} = '${search_keyword}'`;
+    } else if (search_by === "order_id" && isNaN(search_keyword)) {
+      return api_response(res, 200, 1, "order data fetched successfully!", {
+        total_items: total_records.count,
+        page_number: page_number,
+        page_size: page_size,
+        items: data,
+      });
+    } else if (search_by === "order_date" && search_keyword.includes("/")) {
+      const [date1, date2] = search_keyword.split("/");
+      where_query = `where po.created_at between '${date1.trim()}' and '${date2.trim()}'`;
+    } else if (search_by === "order_date" && !search_keyword.includes("/")) {
+      return api_response(res, 200, 1, "order data fetched successfully!", {
+        total_items: total_records.count,
+        page_number: page_number,
+        page_size: page_size,
+        items: data,
+      });
+    }
+
+    if (order_type.trim() !== "All" && order_type.trim() !== "") {
+      where_query += ` and po.payment_status = :order_type`;
+    }
+
+    if (search_keyword != "" && search_by != "") {
       data = await db.sequelize.query(
         `
         select * from
         (select au.id as user_id, au.user_name, au.email, au.mobile_no, po.order_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
-        inner join prime_orders po using(order_id)
-        inner join app_users au on au.id = po.user_id
-        where au.user_name like '%${search_keyword}%'
+        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active, po.payment_msg from prime_orders po
+        left join prime_subscriptions ps using(order_id)
+        left join app_users au on au.id = po.user_id
+        ${where_query}
         order by user_id asc limit :page_size offset :offset_value)
         order by ${order_by} ${order_dir};
       `,
@@ -298,18 +350,25 @@ export const get_all_orders = async (req, res) => {
             page_size: Number(page_size),
             search_keyword: search_keyword.trim(),
             offset_value,
+            order_type,
           },
           type: db.Sequelize.QueryTypes.SELECT,
+          // logging: console.log,
         }
       );
     } else {
+      if (order_type.trim() !== "All" && order_type.trim() !== "") {
+        where_query = `where po.payment_status = :order_type`;
+      } else where_query = "";
+
       data = await db.sequelize.query(
         `
         select * from
         (select au.id as user_id, au.user_name, au.email, au.mobile_no, po.order_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
-        inner join prime_orders po using(order_id)
-        inner join app_users au on au.id = po.user_id
+        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active, po.payment_msg from prime_orders po
+        left join prime_subscriptions ps using(order_id)
+        left join app_users au on au.id = po.user_id
+        ${where_query}
         order by user_id asc limit :page_size offset :offset_value)
         order by ${order_by} ${order_dir};
       `,
@@ -317,11 +376,14 @@ export const get_all_orders = async (req, res) => {
           replacements: {
             page_size: Number(page_size),
             offset_value,
+            order_type,
           },
           type: db.Sequelize.QueryTypes.SELECT,
+          // logging: console.log,
         }
       );
     }
+
     const response = {
       total_items: total_records.count,
       page_number: page_number,

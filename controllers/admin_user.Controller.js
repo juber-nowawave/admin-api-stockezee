@@ -74,7 +74,7 @@ export const user_create = async (req, res) => {
     user_name = user_name.toLowerCase();
     gender = gender.toLowerCase();
     user_role = user_role.toLowerCase();
-    
+
     const isEmailExist = await db.admin_users.findOne({
       where: {
         email,
@@ -176,12 +176,19 @@ export const all_users = async (req, res) => {
       );
     }
 
+    let { search_by, search_keyword } = req.query;
+    search_by = search_by.trim();
+    search_keyword = search_keyword.trim();
+
     let all_users = await db.sequelize.query(
       `
       select au.id, au.user_name, ar.title as user_role, au.email, au.mobile_no, au.gender, au.status from admin_users au
       inner join admin_roles ar on ar.id = au.role_id
+      where ${search_by} like '%${search_keyword}%'
+      order by ar.id desc
     `,
       {
+        replacements:{search_keyword},
         type: db.Sequelize.QueryTypes.SELECT,
       }
     );

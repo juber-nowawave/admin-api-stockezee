@@ -50,7 +50,7 @@ export const user_login = async (req, res) => {
       module: page,
     };
     let page_permission2 = [];
-    page_permission = page_permission.forEach((obj) => {
+    page_permission = page_permission.forEach((obj) => {   
       if (obj.pages != page) {
         page_permission2.push(page_obj);
         page_obj = {};
