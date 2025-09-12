@@ -177,6 +177,9 @@ export const all_users = async (req, res) => {
     }
 
     let { search_by, search_keyword } = req.query;
+    if(search_by === undefined|| search_keyword === undefined){
+      return api_response(res, 401, 0, "Missing parameters!", null);
+    }
     search_by = search_by.trim();
     search_keyword = search_keyword.trim();
 
