@@ -67,23 +67,22 @@ export const get_all_user = async (req, res) => {
       return api_response(res, 400, 0, "Invalid order_dir value", null);
     }
 
-    const [total_records] = await db.sequelize.query(
-      `select count(id) from app_users`,
-      {
-        type: db.Sequelize.QueryTypes.SELECT,
-      }
-    );
-
     search_keyword = search_keyword.trim();
     search_by = search_by.trim();
     if (search_keyword != "" && search_by != "") {
       data = await db.sequelize.query(
         `
         select * from 
-        (select id, user_name, email, is_email_verify, mobile_no, is_mobile_no_verify,
-         gender, login_method, last_login, created_at from app_users
-         where ${search_by} like '%${search_keyword}%'
-         order by id asc limit :page_size offset :offset_value)
+        (
+         select 
+          id, user_name, email, is_email_verify,
+          mobile_no, is_mobile_no_verify, gender,
+          login_method, last_login, created_at,
+          count(*) over() as total_items
+          from app_users
+          where ${search_by} like '%${search_keyword}%'
+          order by id asc limit :page_size offset :offset_value
+        ) sub
         order by ${order_by} ${order_dir};    
       `,
         {
@@ -98,9 +97,14 @@ export const get_all_user = async (req, res) => {
       data = await db.sequelize.query(
         `
         select * from 
-        (select id, user_name, email, is_email_verify, mobile_no, is_mobile_no_verify,
-         gender, login_method, last_login, created_at from app_users 
-         order by id asc limit :page_size offset :offset_value) 
+        (
+         select id, user_name, email, is_email_verify,
+          mobile_no, is_mobile_no_verify, gender,
+          login_method, last_login, created_at,
+          count(*) over() as total_items
+         from app_users 
+         order by id asc limit :page_size offset :offset_value
+        ) sub 
         order by ${order_by} ${order_dir};    
       `,
         {
@@ -112,8 +116,10 @@ export const get_all_user = async (req, res) => {
         }
       );
     }
+
+    const total_records = data.length !== 0 ? Number(data[0].total_items) : 0;
     const response = {
-      total_items: total_records.count,
+      total_items: total_records,
       page_number: page_number,
       page_size: page_size,
       items: data,
@@ -294,15 +300,6 @@ export const get_all_orders = async (req, res) => {
       return api_response(res, 400, 0, "Invalid order_dir value", null);
     }
 
-    const [total_records] = await db.sequelize.query(
-      `select count(po.order_id) as count from prime_orders po
-        left join prime_subscriptions ps using(order_id)
-        left join app_users au on au.id = po.user_id`,
-      {
-        type: db.Sequelize.QueryTypes.SELECT,
-      }
-    );
-
     search_by = search_by.trim();
     search_keyword = search_keyword.trim();
 
@@ -337,12 +334,21 @@ export const get_all_orders = async (req, res) => {
       data = await db.sequelize.query(
         `
         select * from
-        (select au.id as user_id, au.user_name, au.email, au.mobile_no, po.order_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active, po.payment_msg from prime_orders po
-        left join prime_subscriptions ps using(order_id)
-        left join app_users au on au.id = po.user_id
-        ${where_query}
-        order by user_id asc limit :page_size offset :offset_value)
+        (
+          select 
+           au.id as user_id, au.user_name, au.email,
+           au.mobile_no, po.order_id, po.promo_code, po.original_price,
+           po.discount, po.final_price, po.payment_order_id, po.payment_status,     
+           po.payment_method, po.payment_txn_id, po.created_at as order_date,
+           ps.start_date, ps.end_date, ps.is_active, po.payment_msg,
+           count(*) over() as total_items 
+          from prime_orders po
+          left join prime_subscriptions ps using(order_id)
+          inner join app_users au on au.id = po.user_id
+          ${where_query}
+          order by user_id asc
+          limit :page_size offset :offset_value
+        ) sub
         order by ${order_by} ${order_dir};
       `,
         {
@@ -364,12 +370,22 @@ export const get_all_orders = async (req, res) => {
       data = await db.sequelize.query(
         `
         select * from
-        (select au.id as user_id, au.user_name, au.email, au.mobile_no, po.order_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active, po.payment_msg from prime_orders po
-        left join prime_subscriptions ps using(order_id)
-        left join app_users au on au.id = po.user_id
-        ${where_query}
-        order by user_id asc limit :page_size offset :offset_value)
+        (
+           select 
+            au.id as user_id, au.user_name, au.email,
+            au.mobile_no, po.order_id, po.promo_code, 
+            po.original_price, po.discount, po.final_price,
+            po.payment_order_id, po.payment_status,     
+            po.payment_method, po.payment_txn_id, po.created_at as order_date,
+            ps.start_date, ps.end_date, ps.is_active, po.payment_msg,
+            count(*) over() as total_items
+           from prime_orders po
+           left join prime_subscriptions ps using(order_id)
+           inner join app_users au on au.id = po.user_id
+           ${where_query}
+           order by user_id asc
+           limit :page_size offset :offset_value
+        ) sub
         order by ${order_by} ${order_dir};
       `,
         {
@@ -383,9 +399,9 @@ export const get_all_orders = async (req, res) => {
         }
       );
     }
-
+    const total_records = data.length !== 0 ? Number(data[0].total_items) : 0;
     const response = {
-      total_items: total_records.count,
+      total_items: total_records,
       page_number: page_number,
       page_size: page_size,
       items: data,
