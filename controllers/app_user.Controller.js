@@ -504,8 +504,7 @@ export const get_specific_order = async (req, res) => {
            au.mobile_no, po.order_id, po.promo_code, po.original_price,
            po.discount, po.final_price, po.payment_order_id, po.payment_status,     
            po.payment_method, po.payment_txn_id, po.created_at as order_date,
-           ps.start_date, ps.end_date, ps.is_active, po.payment_msg,
-           count(*) over() as total_items 
+           ps.start_date, ps.end_date, ps.is_active, po.payment_msg
           from prime_orders po
           left join prime_subscriptions ps using(order_id)
           inner join app_users au on au.id = po.user_id
@@ -518,33 +517,12 @@ export const get_specific_order = async (req, res) => {
       }
     );
 
-    data = data.map((obj) => ({
-      user_id: obj.user_id,
-      user_name: obj.user_name,
-      email: obj.email,
-      mobile_no: obj.mobile_no,
-      order_id: obj.order_id,
-      promo_code: obj.promo_code,
-      original_price: obj.original_price,
-      discount: obj.discount,
-      final_price: obj.final_price,
-      payment_order_id: obj.payment_order_id,
-      payment_status: obj.payment_status,
-      payment_method: obj.payment_method,
-      payment_txn_id: obj.payment_txn_id,
-      order_date: obj.order_date,
-      start_date: obj.start_date,
-      end_date: obj.end_date,
-      is_active: obj.is_active,
-      payment_msg: obj.payment_msg,
-    }));
-
     return api_response(
       res,
       200,
       1,
       "order details fetched successfully!",
-      data
+      data[0]
     );
   } catch (error) {
     console.error("Error ocured during fetch order list", error);
