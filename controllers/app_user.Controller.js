@@ -55,7 +55,14 @@ export const get_all_user = async (req, res) => {
       order_dir,
     } = req.query;
 
-    if (!page_number || !page_size || !order_by || !order_dir || search_keyword === undefined || search_by === undefined) {
+    if (
+      !page_number ||
+      !page_size ||
+      !order_by ||
+      !order_dir ||
+      search_keyword === undefined ||
+      search_by === undefined
+    ) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
 
@@ -72,8 +79,6 @@ export const get_all_user = async (req, res) => {
     if (search_keyword != "" && search_by != "") {
       data = await db.sequelize.query(
         `
-        select * from 
-        (
          select 
           id, user_name, email, is_email_verify,
           mobile_no, is_mobile_no_verify, gender,
@@ -81,9 +86,8 @@ export const get_all_user = async (req, res) => {
           count(*) over() as total_items
           from app_users
           where ${search_by} like '%${search_keyword}%'
-          order by id asc limit :page_size offset :offset_value
-        ) sub
-        order by ${order_by} ${order_dir};    
+          order by ${order_by} ${order_dir}
+          limit :page_size offset :offset_value    
       `,
         {
           replacements: {
@@ -96,16 +100,13 @@ export const get_all_user = async (req, res) => {
     } else {
       data = await db.sequelize.query(
         `
-        select * from 
-        (
          select id, user_name, email, is_email_verify,
           mobile_no, is_mobile_no_verify, gender,
           login_method, last_login, created_at,
           count(*) over() as total_items
          from app_users 
-         order by id asc limit :page_size offset :offset_value
-        ) sub 
-        order by ${order_by} ${order_dir};    
+         order by ${order_by} ${order_dir} 
+         limit :page_size offset :offset_value    
       `,
         {
           replacements: {
@@ -118,6 +119,20 @@ export const get_all_user = async (req, res) => {
     }
 
     const total_records = data.length !== 0 ? Number(data[0].total_items) : 0;
+
+    data = data.map((obj) => ({
+      id: obj.id,
+      user_name: obj.user_name,
+      email: obj.email,
+      is_email_verify: obj.is_email_verify,
+      mobile_no: obj.mobile_no,
+      is_mobile_no_verify: obj.is_mobile_no_verify,
+      gender: obj.gender,
+      login_method: obj.login_method,
+      last_login: obj.last_login,
+      created_at: obj.created_at,
+    }));
+
     const response = {
       total_items: total_records,
       page_number: page_number,
@@ -309,7 +324,7 @@ export const get_all_orders = async (req, res) => {
       where_query = `where po.${search_by} = '${search_keyword}'`;
     } else if (search_by === "order_id" && isNaN(search_keyword)) {
       return api_response(res, 200, 1, "order data fetched successfully!", {
-        total_items: total_records.count,
+        total_items: 0,
         page_number: page_number,
         page_size: page_size,
         items: data,
@@ -319,7 +334,7 @@ export const get_all_orders = async (req, res) => {
       where_query = `where po.created_at between '${date1.trim()}' and '${date2.trim()}'`;
     } else if (search_by === "order_date" && !search_keyword.includes("/")) {
       return api_response(res, 200, 1, "order data fetched successfully!", {
-        total_items: total_records.count,
+        total_items: 0,
         page_number: page_number,
         page_size: page_size,
         items: data,
@@ -333,23 +348,19 @@ export const get_all_orders = async (req, res) => {
     if (search_keyword != "" && search_by != "") {
       data = await db.sequelize.query(
         `
-        select * from
-        (
           select 
            au.id as user_id, au.user_name, au.email,
-           au.mobile_no, po.order_id, po.promo_code, po.original_price,
-           po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-           po.payment_method, po.payment_txn_id, po.created_at as order_date,
-           ps.start_date, ps.end_date, ps.is_active, po.payment_msg,
+           au.mobile_no, po.order_id, po.final_price,
+           po.payment_order_id, po.payment_status,     
+           po.payment_method, po.created_at as order_date,
+           ps.is_active,
            count(*) over() as total_items 
           from prime_orders po
           left join prime_subscriptions ps using(order_id)
           inner join app_users au on au.id = po.user_id
           ${where_query}
-          order by user_id asc
-          limit :page_size offset :offset_value
-        ) sub
-        order by ${order_by} ${order_dir};
+          order by ${order_by} ${order_dir}
+          limit :page_size offset :offset_value;
       `,
         {
           replacements: {
@@ -369,24 +380,19 @@ export const get_all_orders = async (req, res) => {
 
       data = await db.sequelize.query(
         `
-        select * from
-        (
            select 
             au.id as user_id, au.user_name, au.email,
-            au.mobile_no, po.order_id, po.promo_code, 
-            po.original_price, po.discount, po.final_price,
+            au.mobile_no, po.order_id, po.final_price,
             po.payment_order_id, po.payment_status,     
-            po.payment_method, po.payment_txn_id, po.created_at as order_date,
-            ps.start_date, ps.end_date, ps.is_active, po.payment_msg,
+            po.payment_method, po.created_at as order_date,
+            ps.is_active,
             count(*) over() as total_items
            from prime_orders po
            left join prime_subscriptions ps using(order_id)
            inner join app_users au on au.id = po.user_id
            ${where_query}
-           order by user_id asc
-           limit :page_size offset :offset_value
-        ) sub
-        order by ${order_by} ${order_dir};
+           order by ${order_by} ${order_dir}
+           limit :page_size offset :offset_value 
       `,
         {
           replacements: {
@@ -400,6 +406,28 @@ export const get_all_orders = async (req, res) => {
       );
     }
     const total_records = data.length !== 0 ? Number(data[0].total_items) : 0;
+
+    data = data.map((obj) => ({
+      user_id: obj.user_id,
+      user_name: obj.user_name,
+      email: obj.email,
+      mobile_no: obj.mobile_no,
+      order_id: obj.order_id,
+      promo_code: obj.promo_code,
+      original_price: obj.original_price,
+      discount: obj.discount,
+      final_price: obj.final_price,
+      payment_order_id: obj.payment_order_id,
+      payment_status: obj.payment_status,
+      payment_method: obj.payment_method,
+      payment_txn_id: obj.payment_txn_id,
+      order_date: obj.order_date,
+      start_date: obj.start_date,
+      end_date: obj.end_date,
+      is_active: obj.is_active,
+      payment_msg: obj.payment_msg,
+    }));
+
     const response = {
       total_items: total_records,
       page_number: page_number,
@@ -412,6 +440,111 @@ export const get_all_orders = async (req, res) => {
       1,
       "order data fetched successfully!",
       response
+    );
+  } catch (error) {
+    console.error("Error ocured during fetch order list", error);
+    return api_response(res, 500, 0, "Internal server error", null);
+  }
+};
+
+export const get_specific_order = async (req, res) => {
+  try {
+    const header = req.headers["authorization"];
+    if (!header || !header.startsWith("Bearer ")) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Authorization token missing or malformed",
+        null
+      );
+    }
+
+    const token = header.split(" ")[1];
+    const verify = await verify_token(token);
+
+    if (!verify) {
+      return api_response(res, 400, 0, "Invalid token!", null);
+    }
+
+    const is_accessible = await db.sequelize.query(
+      `
+      select ar.id as role_id, ar.title from admin_roles ar 
+      inner join admin_role_page_permission arpp on ar.id = arpp.role_id
+      inner join admin_pages ap on arpp.page_id = ap.id
+      inner join admin_page_permission app on arpp.permission_id = app.id
+      where ar.id = :role_id and ap.name = 'order_management' and app.name = 'view'
+    `,
+      {
+        replacements: { role_id: verify.role_id },
+        type: db.Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (is_accessible.length == 0) {
+      return api_response(
+        res,
+        401,
+        0,
+        "Unauthorized access!, you don't have permission to view order details",
+        null
+      );
+    }
+
+    let { id } = req.query;
+
+    if (!id) {
+      return api_response(res, 401, 0, "Missing order id!", null);
+    }
+
+    let data = await db.sequelize.query(
+      `
+          select 
+           au.id as user_id, au.user_name, au.email,
+           au.mobile_no, po.order_id, po.promo_code, po.original_price,
+           po.discount, po.final_price, po.payment_order_id, po.payment_status,     
+           po.payment_method, po.payment_txn_id, po.created_at as order_date,
+           ps.start_date, ps.end_date, ps.is_active, po.payment_msg,
+           count(*) over() as total_items 
+          from prime_orders po
+          left join prime_subscriptions ps using(order_id)
+          inner join app_users au on au.id = po.user_id
+          where order_id = :id
+      `,
+      {
+        replacements: { id },
+        type: db.Sequelize.QueryTypes.SELECT,
+        // logging: console.log,
+      }
+    );
+
+    data = data.map((obj) => ({
+      user_id: obj.user_id,
+      user_name: obj.user_name,
+      email: obj.email,
+      mobile_no: obj.mobile_no,
+      order_id: obj.order_id,
+      promo_code: obj.promo_code,
+      original_price: obj.original_price,
+      discount: obj.discount,
+      final_price: obj.final_price,
+      payment_order_id: obj.payment_order_id,
+      payment_status: obj.payment_status,
+      payment_method: obj.payment_method,
+      payment_txn_id: obj.payment_txn_id,
+      order_date: obj.order_date,
+      start_date: obj.start_date,
+      end_date: obj.end_date,
+      is_active: obj.is_active,
+      payment_msg: obj.payment_msg,
+    }));
+
+    return api_response(
+      res,
+      200,
+      1,
+      "order details fetched successfully!",
+      data
     );
   } catch (error) {
     console.error("Error ocured during fetch order list", error);
