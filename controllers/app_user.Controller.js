@@ -323,6 +323,10 @@ export const get_all_orders = async (req, res) => {
       old_date = moment().subtract(90, "days").format("YYYY-MM-DD");
     } else if (duration.includes(`Jan ${current_year} - till date`)) {
       old_date = `${current_year}-01-01`;
+    } else if(duration.includes('/')){
+      const [start_date , end_date] = duration.split('/');
+      old_date = moment(start_date).tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+      current_date = moment(end_date).tz("Asia/Kolkata").add(1, "day").add(5, "hours").add(30, "minutes").format("YYYY-MM-DD HH:mm:ss");
     }
 
     let data = [];
