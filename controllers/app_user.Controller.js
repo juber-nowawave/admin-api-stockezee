@@ -311,24 +311,26 @@ export const get_all_orders = async (req, res) => {
     ) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
-    let current_date = moment().format("YYYY-MM-DD");
-    let old_date = current_date;
+    let current_date = moment().tz("Asia/Kolkata").add(18, "hours").add(29, "minutes").format("YYYY-MM-DD HH:mm:ss");
+    let old_date = moment().format("YYYY-MM-DD HH:mm:ss");
     let current_year = moment().year();
     
     if (duration === "7 days") {
-      old_date = moment().subtract(7, "days").format("YYYY-MM-DD");
+      old_date = moment().subtract(7, "days").format("YYYY-MM-DD HH:mm:ss");
     } else if (duration === "30 days") {
-      old_date = moment().subtract(30, "days").format("YYYY-MM-DD");
+      old_date = moment().subtract(30, "days").format("YYYY-MM-DD HH:mm:ss");
     } else if (duration === "90 days") {
-      old_date = moment().subtract(90, "days").format("YYYY-MM-DD");
+      old_date = moment().subtract(90, "days").format("YYYY-MM-DD HH:mm:ss");
     } else if (duration.includes(`Jan ${current_year} - till date`)) {
       old_date = `${current_year}-01-01`;
     } else if(duration.includes('/')){
       const [start_date , end_date] = duration.split('/');
-      old_date = moment(start_date).tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
-      current_date = moment(end_date).tz("Asia/Kolkata").add(1, "day").add(5, "hours").add(30, "minutes").format("YYYY-MM-DD HH:mm:ss");
+      old_date = moment(start_date).format("YYYY-MM-DD HH:mm:ss");
+      current_date = moment(end_date).tz("Asia/Kolkata").add(18, "hours").add(29, "minutes").format("YYYY-MM-DD HH:mm:ss");
     }
 
+    console.log('---->',old_date,'---->',current_date);
+    
     let data = [];
     const offset_value = Number(page_size) * (Number(page_number) - 1);
     const valid_dirs = ["asc", "desc"];
