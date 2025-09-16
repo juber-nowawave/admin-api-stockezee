@@ -311,7 +311,7 @@ export const get_all_orders = async (req, res) => {
     ) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
-    const current_date = moment().format("YYYY-MM-DD");
+    let current_date = moment().format("YYYY-MM-DD");
     let old_date = current_date;
     let current_year = moment().year();
     
