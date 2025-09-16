@@ -1,6 +1,7 @@
 import api_response from "../utils/api_response.js";
 import { generate_token, verify_token } from "../utils/jwt.js";
 import db from "../models/index.js";
+import moment from "moment";
 
 export const get_all_user = async (req, res) => {
   try {
@@ -293,6 +294,8 @@ export const get_all_orders = async (req, res) => {
       order_by,
       order_dir,
       order_type,
+      duration,
+      payment_method,
     } = req.query;
 
     if (
@@ -301,10 +304,24 @@ export const get_all_orders = async (req, res) => {
       !order_by ||
       !order_dir ||
       !order_type ||
+      !duration ||
+      !payment_method ||
       search_keyword === undefined ||
       search_by === undefined
     ) {
       return api_response(res, 401, 0, "Missing parameters!", null);
+    }
+    const current_date = moment().format("YYYY-MM-DD");
+    let old_date = current_date;
+
+    if (duration === "7 days") {
+      old_date = moment().subtract(7, "days").format("YYYY-MM-DD");
+    } else if (duration === "30 days") {
+      old_date = moment().subtract(30, "days").format("YYYY-MM-DD");
+    } else if (duration === "90 days") {
+      old_date = moment().subtract(90, "days").format("YYYY-MM-DD");
+    } else if (duration === "Jan 2025") {
+      old_date = "2025-01-01";
     }
 
     let data = [];
@@ -344,6 +361,9 @@ export const get_all_orders = async (req, res) => {
     if (order_type.trim() !== "All" && order_type.trim() !== "") {
       where_query += ` and po.payment_status = :order_type`;
     }
+    if (payment_method.trim() !== "All" && payment_method.trim() !== "") {
+      where_query += ` and po.payment_method = :payment_method`;
+    }
 
     if (search_keyword != "" && search_by != "") {
       data = await db.sequelize.query(
@@ -358,7 +378,7 @@ export const get_all_orders = async (req, res) => {
           from prime_orders po
           left join prime_subscriptions ps using(order_id)
           inner join app_users au on au.id = po.user_id
-          ${where_query}
+          ${where_query} and po.created_at between :old_date and :current_date
           order by ${order_by} ${order_dir}
           limit :page_size offset :offset_value;
       `,
@@ -368,6 +388,9 @@ export const get_all_orders = async (req, res) => {
             search_keyword: search_keyword.trim(),
             offset_value,
             order_type,
+            old_date,
+            current_date,
+            payment_method,
           },
           type: db.Sequelize.QueryTypes.SELECT,
           // logging: console.log,
@@ -375,9 +398,12 @@ export const get_all_orders = async (req, res) => {
       );
     } else {
       if (order_type.trim() !== "All" && order_type.trim() !== "") {
-        where_query = `where po.payment_status = :order_type`;
-      } else where_query = "";
+        where_query = `where po.payment_status = :order_type and `;
+      } else where_query = "where";
 
+      if (payment_method.trim() !== "All" && payment_method.trim() !== "") {
+        where_query += ` po.payment_method = :payment_method and`;
+      }
       data = await db.sequelize.query(
         `
            select 
@@ -390,7 +416,7 @@ export const get_all_orders = async (req, res) => {
            from prime_orders po
            left join prime_subscriptions ps using(order_id)
            inner join app_users au on au.id = po.user_id
-           ${where_query}
+           ${where_query} po.created_at between :old_date and :current_date
            order by ${order_by} ${order_dir}
            limit :page_size offset :offset_value 
       `,
@@ -399,6 +425,9 @@ export const get_all_orders = async (req, res) => {
             page_size: Number(page_size),
             offset_value,
             order_type,
+            old_date,
+            current_date,
+            payment_method,
           },
           type: db.Sequelize.QueryTypes.SELECT,
           // logging: console.log,
