@@ -326,7 +326,7 @@ export const get_all_orders = async (req, res) => {
     } else if (duration === "90 days") {
       old_date = moment().subtract(90, "days").format("YYYY-MM-DD");
       old_date += ' 00:00:00';
-    } else if (duration.includes(`Jan ${current_year} - till date`)) {
+    } else if (duration == current_year) {
       old_date = `${current_year}-01-01 00:00:00`;
     } else if(duration.includes('/')){
       const [start_date , end_date] = duration.split('/');
