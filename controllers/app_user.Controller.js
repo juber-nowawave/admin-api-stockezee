@@ -313,15 +313,16 @@ export const get_all_orders = async (req, res) => {
     }
     const current_date = moment().format("YYYY-MM-DD");
     let old_date = current_date;
-
+    let current_year = moment().year();
+    
     if (duration === "7 days") {
       old_date = moment().subtract(7, "days").format("YYYY-MM-DD");
     } else if (duration === "30 days") {
       old_date = moment().subtract(30, "days").format("YYYY-MM-DD");
     } else if (duration === "90 days") {
       old_date = moment().subtract(90, "days").format("YYYY-MM-DD");
-    } else if (duration === "Jan 2025") {
-      old_date = "2025-01-01";
+    } else if (duration.includes === `Jan ${current_year} - till date`) {
+      old_date = `${current_year}-01-01`;
     }
 
     let data = [];
