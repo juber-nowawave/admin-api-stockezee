@@ -311,11 +311,11 @@ export const get_all_orders = async (req, res) => {
     ) {
       return api_response(res, 401, 0, "Missing parameters!", null);
     }
-    let current_date = moment().tz("Asia/Kolkata").format("YYYY-MM-DD");
-    current_date += ' 23:59:30'
-    let old_date = moment().format("YYYY-MM-DD");
-    old_date += ' 00:00:00';
     let current_year = moment().year();
+    let current_date = moment().tz("Asia/Kolkata").format("YYYY-MM-DD");
+    let old_date = moment().format("YYYY-MM-DD");
+    current_date += ' 23:59:59'
+    old_date += ' 00:00:00';
     
     if (duration === "7 days") {
       old_date = moment().subtract(7, "days").format("YYYY-MM-DD");
@@ -333,7 +333,7 @@ export const get_all_orders = async (req, res) => {
       old_date = moment(start_date).format("YYYY-MM-DD");
       old_date += ' 00:00:00'
       current_date = moment(end_date).tz("Asia/Kolkata").format("YYYY-MM-DD");
-      current_date += ' 23:59:30'
+      current_date += ' 23:59:59'
     }
 
     console.log('---->',old_date,'---->',current_date);
