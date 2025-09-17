@@ -384,7 +384,8 @@ export const get_all_orders = async (req, res) => {
         `
           select 
            au.id as user_id, au.user_name, au.email,
-           au.mobile_no, po.order_id, po.final_price,
+           au.mobile_no, au.is_email_verify, au.is_mobile_no_verify,
+           po.order_id, po.final_price,
            po.payment_order_id, po.payment_status,     
            po.payment_method, po.created_at as order_date,
            ps.is_active,
@@ -422,7 +423,8 @@ export const get_all_orders = async (req, res) => {
         `
            select 
             au.id as user_id, au.user_name, au.email,
-            au.mobile_no, po.order_id, po.final_price,
+            au.mobile_no, au.is_email_verify, au.is_mobile_no_verify, 
+            po.order_id, po.final_price,
             po.payment_order_id, po.payment_status,     
             po.payment_method, po.created_at as order_date,
             ps.is_active,
@@ -455,6 +457,8 @@ export const get_all_orders = async (req, res) => {
       user_name: obj.user_name,
       email: obj.email,
       mobile_no: obj.mobile_no,
+      is_email_verify: obj.is_email_verify,
+      is_mobile_no_verify: obj.is_mobile_no_verify,
       order_id: obj.order_id,
       promo_code: obj.promo_code,
       original_price: obj.original_price,
@@ -544,7 +548,8 @@ export const get_specific_order = async (req, res) => {
       `
           select 
            au.id as user_id, au.user_name, au.email,
-           au.mobile_no, po.order_id, po.promo_code, po.original_price,
+           au.mobile_no, au.is_email_verify, au.is_mobile_no_verify, 
+           po.order_id, po.promo_code, po.original_price,
            po.discount, po.final_price, po.payment_order_id, po.payment_status,     
            po.payment_method, po.payment_txn_id, po.created_at as order_date,
            ps.start_date, ps.end_date, ps.is_active, po.payment_msg
