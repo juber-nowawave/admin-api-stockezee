@@ -453,6 +453,7 @@ export const get_all_orders = async (req, res) => {
     const total_records = data.length !== 0 ? Number(data[0].total_items) : 0;
 
     data = data.map((obj) => ({
+      const order_date = obj.order_date != null ? moment(obj.order_date).tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss") : null;
       user_id: obj.user_id,
       user_name: obj.user_name,
       email: obj.email,
@@ -468,7 +469,7 @@ export const get_all_orders = async (req, res) => {
       payment_status: obj.payment_status,
       payment_method: obj.payment_method,
       payment_txn_id: obj.payment_txn_id,
-      order_date: obj.order_date,
+      order_date: order_date,
       start_date: obj.start_date,
       end_date: obj.end_date,
       is_active: obj.is_active,
