@@ -460,19 +460,16 @@ export const get_all_orders = async (req, res) => {
       is_email_verify: obj.is_email_verify,
       is_mobile_no_verify: obj.is_mobile_no_verify,
       order_id: obj.order_id,
-      promo_code: obj.promo_code,
-      original_price: obj.original_price,
-      discount: obj.discount,
       final_price: obj.final_price,
       payment_order_id: obj.payment_order_id,
       payment_status: obj.payment_status,
       payment_method: obj.payment_method,
-      payment_txn_id: obj.payment_txn_id,
-      order_date: moment(obj.order_date).tz("Asia/Kolkata").subtract(5, "hours").subtract(30, "minutes").format("YYYY-MM-DD HH:mm:ss"),
-      start_date: obj.start_date,
-      end_date: obj.end_date,
+      order_date: moment(obj.order_date)
+        .tz("Asia/Kolkata")
+        .subtract(5, "hours")
+        .subtract(30, "minutes")
+        .format("YYYY-MM-DD HH:mm:ss"),
       is_active: obj.is_active,
-      payment_msg: obj.payment_msg,
     }));
 
     const response = {
@@ -565,12 +562,39 @@ export const get_specific_order = async (req, res) => {
       }
     );
 
+    data = {
+      user_id: data[0].user_id,
+      user_name: data[0].user_name,
+      email: data[0].email,
+      mobile_no: data[0].mobile_no,
+      is_email_verify: data[0].is_email_verify,
+      is_mobile_no_verify: data[0].is_mobile_no_verify,
+      order_id: data[0].order_id,
+      promo_code: data[0].promo_code,
+      original_price: data[0].original_price,
+      discount: data[0].discount,
+      final_price: data[0].final_price,
+      payment_order_id: data[0].payment_order_id,
+      payment_status: data[0].payment_status,
+      payment_method: data[0].payment_method,
+      payment_txn_id: data[0].payment_txn_id,
+      order_date: moment(data[0].order_date)
+        .tz("Asia/Kolkata")
+        .subtract(5, "hours")
+        .subtract(30, "minutes")
+        .format("YYYY-MM-DD HH:mm:ss"),
+      start_date: data[0].start_date,
+      end_date: data[0].end_date,
+      is_active: data[0].is_active,
+      payment_msg: data[0].payment_msg,
+    };
+
     return api_response(
       res,
       200,
       1,
       "order details fetched successfully!",
-      data[0]
+      data
     );
   } catch (error) {
     console.error("Error ocured during fetch order list", error);
