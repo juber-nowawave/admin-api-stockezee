@@ -468,7 +468,7 @@ export const get_all_orders = async (req, res) => {
       payment_status: obj.payment_status,
       payment_method: obj.payment_method,
       payment_txn_id: obj.payment_txn_id,
-      order_date: moment(obj.order_date).tz("Asia/Kolkata").format(),
+      order_date: moment(obj.order_date).tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),
       start_date: obj.start_date,
       end_date: obj.end_date,
       is_active: obj.is_active,
