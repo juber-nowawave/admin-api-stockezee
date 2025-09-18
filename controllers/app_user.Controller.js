@@ -215,10 +215,15 @@ export const get_specific_user = async (req, res) => {
       }
     );
 
-    const order_info = await db.sequelize.query(
+    let order_info = await db.sequelize.query(
       `
-      select pp.name as plan_type, pp.duration as plan_duration, pp.plan_id, po.order_id, ps.id as membership_id, po.promo_code, po.original_price, po.discount, po.final_price, po.payment_order_id, po.payment_status,     
-        po.payment_method, po.payment_txn_id, po.created_at as order_date, ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
+      select 
+        pp.name as plan_type, pp.duration as plan_duration,
+        pp.plan_id, po.order_id, ps.id as membership_id,
+        po.promo_code, po.original_price, po.discount,
+        po.final_price, po.payment_order_id, po.payment_status,     
+        po.payment_method, po.payment_txn_id, po.created_at as order_date,
+        ps.start_date, ps.end_date, ps.is_active from prime_subscriptions ps
         inner join prime_orders po using(order_id)
         inner join app_users au on au.id = po.user_id
         inner join prime_plans pp using(plan_id) 
@@ -229,6 +234,28 @@ export const get_specific_user = async (req, res) => {
         type: db.Sequelize.QueryTypes.SELECT,
       }
     );
+
+    order_info = order_info.map((obj) => ({
+      plan_type: obj.plan_type,
+      plan_duration: obj.plan_duration,
+      plan_id: obj.plan_id,
+      order_id: obj.order_id,
+      membership_id: obj.membership_id,
+      promo_code: obj.promo_code,
+      original_price: obj.original_price,
+      discount: obj.discount,
+      final_price: obj.final_price,
+      payment_order_id: obj.payment_order_id,
+      payment_status: obj.payment_status,
+      payment_method: obj.payment_method,
+      payment_txn_id: obj.payment_txn_id,
+      order_date: moment(obj.order_date)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD HH:mm:ss"),
+      start_date: obj.start_date,
+      end_date: obj.end_date,
+      is_active: obj.is_active,
+    }));
 
     const data = {
       user_detail: user_info,
@@ -313,31 +340,32 @@ export const get_all_orders = async (req, res) => {
     }
     let current_year = moment().year();
     let current_date = moment().tz("Asia/Kolkata").format("YYYY-MM-DD");
-    let old_date = moment().format("YYYY-MM-DD");
-    current_date += ' 23:59:59'
-    old_date += ' 00:00:00';
-    
+    let old_date = moment().tz("Asia/Kolkata").format("YYYY-MM-DD");
+    current_date += " 23:59:59";
+    old_date += " 00:00:00";
+    duration = duration.trim();
+
     if (duration === "7 days") {
-      old_date = moment().subtract(7, "days").format("YYYY-MM-DD");
-      old_date += ' 00:00:00';
+      old_date = moment().tz("Asia/Kolkata").subtract(7, "days").format("YYYY-MM-DD");
+      old_date += " 00:00:00";
     } else if (duration === "30 days") {
-      old_date = moment().subtract(30, "days").format("YYYY-MM-DD");
-      old_date += ' 00:00:00';
+      old_date = moment().tz("Asia/Kolkata").subtract(30, "days").format("YYYY-MM-DD");
+      old_date += " 00:00:00";
     } else if (duration === "90 days") {
-      old_date = moment().subtract(90, "days").format("YYYY-MM-DD");
-      old_date += ' 00:00:00';
+      old_date = moment().tz("Asia/Kolkata").subtract(90, "days").format("YYYY-MM-DD");
+      old_date += " 00:00:00";
     } else if (!isNaN(duration) && duration.trim().length === 4) {
       old_date = `${duration}-01-01 00:00:00`;
-    } else if(duration.includes('/')){
-      const [start_date , end_date] = duration.split('/');
-      old_date = moment(start_date).format("YYYY-MM-DD");
-      old_date += ' 00:00:00'
+    } else if (duration.includes("/")) {
+      const [start_date, end_date] = duration.split("/");
+      old_date = moment(start_date).tz("Asia/Kolkata").format("YYYY-MM-DD");
+      old_date += " 00:00:00";
       current_date = moment(end_date).tz("Asia/Kolkata").format("YYYY-MM-DD");
-      current_date += ' 23:59:59'
+      current_date += " 23:59:59";
     }
 
-    console.log('---->',old_date,'---->',current_date);
-    
+    console.log("---->", old_date, "---->", current_date);
+
     let data = [];
     const offset_value = Number(page_size) * (Number(page_number) - 1);
     const valid_dirs = ["asc", "desc"];
@@ -466,8 +494,6 @@ export const get_all_orders = async (req, res) => {
       payment_method: obj.payment_method,
       order_date: moment(obj.order_date)
         .tz("Asia/Kolkata")
-        .subtract(5, "hours")
-        .subtract(30, "minutes")
         .format("YYYY-MM-DD HH:mm:ss"),
       is_active: obj.is_active,
     }));
@@ -580,8 +606,6 @@ export const get_specific_order = async (req, res) => {
       payment_txn_id: data[0].payment_txn_id,
       order_date: moment(data[0].order_date)
         .tz("Asia/Kolkata")
-        .subtract(5, "hours")
-        .subtract(30, "minutes")
         .format("YYYY-MM-DD HH:mm:ss"),
       start_date: data[0].start_date,
       end_date: data[0].end_date,
